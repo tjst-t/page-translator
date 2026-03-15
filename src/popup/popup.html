@@ -7,7 +7,19 @@
 <body>
   <div id="app">
     <h1>PageTranslator</h1>
-    <!-- TODO: implement UI -->
+    <div class="field">
+      <label for="src-lang">翻訳元</label>
+      <select id="src-lang"></select>
+    </div>
+    <div class="field">
+      <label for="tgt-lang">翻訳先</label>
+      <select id="tgt-lang"></select>
+    </div>
+    <div class="actions">
+      <button id="btn-translate" type="button">翻訳</button>
+      <button id="btn-restore" type="button" class="secondary">原文に戻す</button>
+    </div>
+    <div id="status" class="status" hidden></div>
   </div>
   <script src="popup.js" type="module"></script>
 </body>

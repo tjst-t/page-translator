@@ -8,15 +8,17 @@
     "gen-icons": "tsx scripts/gen-icons.ts",
     "lint": "biome check src/",
     "format": "biome format --write src/",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "test:e2e": "tsx tests/e2e/translate.test.ts"
   },
   "devDependencies": {
     "@biomejs/biome": "^1.9.0",
-    "@anthropic-ai/claude-code": "latest",
-    "@anthropic-ai/sdk": "latest",
-    "@anthropic-ai/tokenizer": "latest",
-    "@anthropic-ai/bedrock-sdk": "latest",
-    "@anthropic-ai/vertex-sdk": "latest"
+    "@types/chrome": "latest",
+    "esbuild": "latest",
+    "puppeteer": "latest",
+    "sharp": "latest",
+    "tsx": "latest",
+    "typescript": "^5.5.0"
   },
   "dependencies": {},
   "engines": {

@@ -3,7 +3,7 @@
   "name": "PageTranslator",
   "version": "0.1.0",
   "description": "Google翻訳でページ全体を翻訳する拡張機能",
-  "permissions": ["activeTab", "scripting", "storage"],
+  "permissions": ["activeTab", "scripting", "storage", "contextMenus"],
   "action": {
     "default_popup": "popup/popup.html",
     "default_icon": {
@@ -20,5 +20,13 @@
   "background": {
     "service_worker": "background/service-worker.js",
     "type": "module"
+  },
+  "commands": {
+    "translate-page": {
+      "suggested_key": {
+        "default": "Alt+T"
+      },
+      "description": "ページを翻訳"
+    }
   }
 }
