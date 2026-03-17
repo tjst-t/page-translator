@@ -3,7 +3,7 @@
   "name": "PageTranslator",
   "version": "0.1.0",
   "description": "Google翻訳でページ全体を翻訳する拡張機能",
-  "permissions": ["activeTab", "scripting", "storage", "contextMenus"],
+  "permissions": ["activeTab", "scripting", "storage", "contextMenus", "tabs"],
   "action": {
     "default_popup": "popup/popup.html",
     "default_icon": {

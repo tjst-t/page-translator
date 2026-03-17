@@ -14,6 +14,27 @@ function isTranslatablePage(url: string | undefined): boolean {
   return !BLOCKED_PREFIXES.some((prefix) => url.startsWith(prefix));
 }
 
+// --- Auto-translate tracking ---
+
+/** Tab IDs where auto-translation is active on navigation */
+const autoTranslateTabs = new Set<number>();
+
+chrome.tabs.onUpdated.addListener(async (tabId, changeInfo, tab) => {
+  if (!autoTranslateTabs.has(tabId)) return;
+  if (changeInfo.status !== "complete") return;
+  if (!isTranslatablePage(tab.url)) return;
+
+  try {
+    await translateTab(tabId);
+  } catch {
+    autoTranslateTabs.delete(tabId);
+  }
+});
+
+chrome.tabs.onRemoved.addListener((tabId) => {
+  autoTranslateTabs.delete(tabId);
+});
+
 // --- Context menu ---
 
 chrome.runtime.onInstalled.addListener(() => {
@@ -136,6 +157,7 @@ async function translateTab(tabId: number) {
 chrome.contextMenus.onClicked.addListener(async (info, tab) => {
   if (info.menuItemId === MENU_ID && tab?.id && isTranslatablePage(tab.url)) {
     await translateTab(tab.id);
+    autoTranslateTabs.add(tab.id);
   }
 });
 
@@ -148,6 +170,7 @@ chrome.commands.onCommand.addListener(async (command) => {
     });
     if (tab?.id && isTranslatablePage(tab.url)) {
       await translateTab(tab.id);
+      autoTranslateTabs.add(tab.id);
     }
   }
 });
@@ -160,12 +183,16 @@ chrome.commands.onCommand.addListener(async (command) => {
 chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
   if (message.action === "translateTab" && typeof message.tabId === "number") {
     translateTab(message.tabId).then(
-      () => sendResponse({ ok: true }),
+      () => {
+        autoTranslateTabs.add(message.tabId);
+        sendResponse({ ok: true });
+      },
       (err) => sendResponse({ ok: false, error: (err as Error).message }),
     );
     return true; // keep channel open for async response
   }
   if (message.action === "restoreTab" && typeof message.tabId === "number") {
+    autoTranslateTabs.delete(message.tabId);
     chrome.scripting
       .executeScript({
         target: { tabId: message.tabId },
