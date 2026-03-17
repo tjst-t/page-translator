@@ -1,14 +1,16 @@
 import * as esbuild from "esbuild";
 import fs from "node:fs";
 import path from "node:path";
+import { fileURLToPath } from "node:url";
 
-const ROOT = path.resolve(
-  path.dirname(new URL(import.meta.url).pathname),
-  "..",
-);
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const ROOT = path.resolve(__dirname, "..");
 const SRC = path.join(ROOT, "src");
 const DIST = path.join(ROOT, "dist");
 const ASSETS = path.join(ROOT, "assets");
+
+const ELEMENT_JS_URL =
+  "https://translate.google.com/translate_a/element.js?cb=googleTranslateElementInit";
 
 function copyFile(src: string, dest: string) {
   fs.mkdirSync(path.dirname(dest), { recursive: true });
@@ -29,6 +31,19 @@ function copyDir(src: string, dest: string) {
   }
 }
 
+async function downloadElementJs() {
+  const vendorDir = path.join(DIST, "vendor");
+  fs.mkdirSync(vendorDir, { recursive: true });
+
+  const resp = await fetch(ELEMENT_JS_URL);
+  if (!resp.ok) {
+    throw new Error(`Failed to download element.js: HTTP ${resp.status}`);
+  }
+  const code = await resp.text();
+  fs.writeFileSync(path.join(vendorDir, "element.js"), code);
+  console.log("Downloaded vendor/element.js");
+}
+
 async function main() {
   // Clean dist
   fs.rmSync(DIST, { recursive: true, force: true });
@@ -39,23 +54,32 @@ async function main() {
   console.log("Copied manifest.json");
 
   // Copy HTML/CSS
-  copyFile(path.join(SRC, "popup/popup.html"), path.join(DIST, "popup/popup.html"));
-  copyFile(path.join(SRC, "popup/popup.css"), path.join(DIST, "popup/popup.css"));
+  copyFile(
+    path.join(SRC, "popup/popup.html"),
+    path.join(DIST, "popup/popup.html"),
+  );
+  copyFile(
+    path.join(SRC, "popup/popup.css"),
+    path.join(DIST, "popup/popup.css"),
+  );
   console.log("Copied popup HTML/CSS");
 
   // Copy icons
   copyDir(path.join(ASSETS, "icons"), path.join(DIST, "icons"));
   console.log("Copied icons");
 
-  // Bundle TypeScript with esbuild
-  const entryPoints = [
-    { in: path.join(SRC, "popup/popup.ts"), out: "popup/popup" },
-    { in: path.join(SRC, "background/service-worker.ts"), out: "background/service-worker" },
-    { in: path.join(SRC, "content/inject.ts"), out: "content/inject" },
-  ];
+  // Download Google Translate element.js
+  await downloadElementJs();
 
+  // Bundle TypeScript with esbuild
   await esbuild.build({
-    entryPoints: entryPoints.map((e) => ({ in: e.in, out: e.out })),
+    entryPoints: [
+      { in: path.join(SRC, "popup/popup.ts"), out: "popup/popup" },
+      {
+        in: path.join(SRC, "background/service-worker.ts"),
+        out: "background/service-worker",
+      },
+    ],
     outdir: DIST,
     bundle: true,
     format: "esm",

@@ -1,8 +1,3 @@
-export interface TranslateConfig {
-  srcLang: string;
-  tgtLang: string;
-}
-
 export interface LanguageOption {
   code: string;
   label: string;

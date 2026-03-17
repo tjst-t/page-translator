@@ -1,12 +1,11 @@
 import sharp from "sharp";
 import path from "node:path";
 import fs from "node:fs";
+import { fileURLToPath } from "node:url";
 
 const SIZES = [16, 48, 128];
-const OUTPUT_DIR = path.resolve(
-  path.dirname(new URL(import.meta.url).pathname),
-  "../assets/icons",
-);
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const OUTPUT_DIR = path.resolve(__dirname, "../assets/icons");
 const BG_COLOR = "#4285F4";
 const TEXT_COLOR = "#FFFFFF";
 

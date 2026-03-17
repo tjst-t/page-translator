@@ -45,19 +45,31 @@ async function saveSettings() {
   });
 }
 
-function showStatus(message: string, type: "success" | "error") {
+let statusTimer: ReturnType<typeof setTimeout> | undefined;
+
+function showStatus(
+  message: string,
+  type: "success" | "error",
+  autoHide = true,
+) {
   statusEl.textContent = message;
   statusEl.className = `status ${type}`;
   statusEl.hidden = false;
-  setTimeout(() => {
-    statusEl.hidden = true;
-  }, 3000);
+  if (statusTimer) clearTimeout(statusTimer);
+  if (autoHide) {
+    statusTimer = setTimeout(() => {
+      statusEl.hidden = true;
+    }, 3000);
+  }
 }
 
 async function getActiveTab(): Promise<chrome.tabs.Tab> {
   const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
   return tab;
 }
+
+// --- Event handlers ---
+// Delegate to service worker via message (proven to work in E2E tests)
 
 btnTranslate.addEventListener("click", async () => {
   const tab = await getActiveTab();
@@ -72,31 +84,19 @@ btnTranslate.addEventListener("click", async () => {
     return;
   }
 
-  const srcLang = srcLangSelect.value;
-  const tgtLang = tgtLangSelect.value;
-
   await saveSettings();
 
   try {
-    await chrome.scripting.executeScript({
-      target: { tabId: tab.id },
-      world: "MAIN",
-      files: ["content/inject.js"],
+    showStatus("翻訳を実行中…", "success", false);
+    const response = await chrome.runtime.sendMessage({
+      action: "translateTab",
+      tabId: tab.id,
     });
-
-    await chrome.scripting.executeScript({
-      target: { tabId: tab.id },
-      world: "MAIN",
-      func: (src: string, tgt: string) => {
-        const event = new CustomEvent("pageTranslatorTranslate", {
-          detail: { srcLang: src, tgtLang: tgt },
-        });
-        document.dispatchEvent(event);
-      },
-      args: [srcLang, tgtLang],
-    });
-
-    showStatus("翻訳を実行中…", "success");
+    if (response?.ok) {
+      showStatus("翻訳完了", "success");
+    } else {
+      showStatus(`エラー: ${response?.error ?? "不明なエラー"}`, "error");
+    }
   } catch (err) {
     showStatus(`エラー: ${(err as Error).message}`, "error");
   }
@@ -107,14 +107,15 @@ btnRestore.addEventListener("click", async () => {
   if (!tab.id) return;
 
   try {
-    await chrome.scripting.executeScript({
-      target: { tabId: tab.id },
-      world: "MAIN",
-      func: () => {
-        document.dispatchEvent(new CustomEvent("pageTranslatorRestore"));
-      },
+    const response = await chrome.runtime.sendMessage({
+      action: "restoreTab",
+      tabId: tab.id,
     });
-    showStatus("原文を復元しました", "success");
+    if (response?.ok) {
+      showStatus("原文を復元しました", "success");
+    } else {
+      showStatus(`エラー: ${response?.error ?? "不明なエラー"}`, "error");
+    }
   } catch (err) {
     showStatus(`エラー: ${(err as Error).message}`, "error");
   }
